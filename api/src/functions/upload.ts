@@ -4,6 +4,17 @@ import * as multipart from "parse-multipart-data";
 
 type ConnectionParts = Record<string, string>;
 
+function normalizeConnectionString(raw: string): string {
+  let value = raw.trim().replace(/[\r\n]/g, "");
+  if (
+    (value.startsWith("\"") && value.endsWith("\"")) ||
+    (value.startsWith("'") && value.endsWith("'"))
+  ) {
+    value = value.slice(1, -1).trim();
+  }
+  return value;
+}
+
 function parseConnectionString(raw: string): ConnectionParts {
   const parts: ConnectionParts = {};
   for (const segment of raw.split(";")) {
@@ -15,7 +26,13 @@ function parseConnectionString(raw: string): ConnectionParts {
       continue;
     }
     const key = segment.slice(0, idx).trim();
-    const value = segment.slice(idx + 1).trim();
+    let value = segment.slice(idx + 1).trim();
+    if (
+      (value.startsWith("\"") && value.endsWith("\"")) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1).trim();
+    }
     if (key) {
       parts[key] = value;
     }
@@ -24,17 +41,19 @@ function parseConnectionString(raw: string): ConnectionParts {
 }
 
 function createBlobServiceClient(connectionString: string): BlobServiceClient {
-  const parts = parseConnectionString(connectionString);
-  const accountName = parts.AccountName;
-  const accountKey = parts.AccountKey;
-  const protocol = parts.DefaultEndpointsProtocol || "https";
-  const endpointSuffix = parts.EndpointSuffix || "core.windows.net";
-  const blobEndpoint = parts.BlobEndpoint || `${protocol}://${accountName}.blob.${endpointSuffix}`;
+  const normalized = normalizeConnectionString(connectionString);
+  const parts = parseConnectionString(normalized);
+  const accountName = parts.AccountName?.trim();
+  const accountKey = parts.AccountKey?.trim();
+  const protocol = (parts.DefaultEndpointsProtocol || "https").trim();
+  let endpointSuffix = (parts.EndpointSuffix || "core.windows.net").trim();
+  endpointSuffix = endpointSuffix.split(/\s+/)[0];
 
   if (!accountName || !accountKey) {
     throw new Error("Invalid storage connection string.");
   }
 
+  const blobEndpoint = `${protocol}://${accountName}.blob.${endpointSuffix}`;
   const credential = new StorageSharedKeyCredential(accountName, accountKey);
   return new BlobServiceClient(blobEndpoint, credential);
 }
