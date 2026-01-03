@@ -1,5 +1,10 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from "@azure/functions";
-import { BlobServiceClient, StorageSharedKeyCredential } from "@azure/storage-blob";
+import {
+  BlobSASPermissions,
+  BlobServiceClient,
+  StorageSharedKeyCredential,
+  generateBlobSASQueryParameters
+} from "@azure/storage-blob";
 import * as multipart from "parse-multipart-data";
 
 type ConnectionParts = Record<string, string>;
@@ -40,7 +45,12 @@ function parseConnectionString(raw: string): ConnectionParts {
   return parts;
 }
 
-function createBlobServiceClient(connectionString: string): BlobServiceClient {
+type StorageClientInfo = {
+  client: BlobServiceClient;
+  credential: StorageSharedKeyCredential;
+};
+
+function createBlobServiceClient(connectionString: string): StorageClientInfo {
   const normalized = normalizeConnectionString(connectionString);
   const parts = parseConnectionString(normalized);
   const accountName = parts.AccountName?.trim();
@@ -55,7 +65,7 @@ function createBlobServiceClient(connectionString: string): BlobServiceClient {
 
   const blobEndpoint = `${protocol}://${accountName}.blob.${endpointSuffix}`;
   const credential = new StorageSharedKeyCredential(accountName, accountKey);
-  return new BlobServiceClient(blobEndpoint, credential);
+  return { client: new BlobServiceClient(blobEndpoint, credential), credential };
 }
 
 export async function uploadImage(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
@@ -84,18 +94,31 @@ export async function uploadImage(request: HttpRequest, context: InvocationConte
     const baseName = file.filename || "image.jpg";
     const fileName = `${Date.now()}-${baseName}`;
 
-    const blobServiceClient = createBlobServiceClient(connectionString);
+    const { client: blobServiceClient, credential } = createBlobServiceClient(connectionString);
     const containerClient = blobServiceClient.getContainerClient(containerName);
-    await containerClient.createIfNotExists({ access: "blob" });
+    await containerClient.createIfNotExists();
 
     const blockBlobClient = containerClient.getBlockBlobClient(fileName);
     await blockBlobClient.upload(file.data, file.data.length, {
       blobHTTPHeaders: { blobContentType: file.type || "application/octet-stream" }
     });
 
+    const startsOn = new Date(Date.now() - 5 * 60 * 1000);
+    const expiresOn = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const sas = generateBlobSASQueryParameters(
+      {
+        containerName,
+        blobName: fileName,
+        permissions: BlobSASPermissions.parse("r"),
+        startsOn,
+        expiresOn
+      },
+      credential
+    ).toString();
+
     return {
       status: 200,
-      jsonBody: { url: blockBlobClient.url, filename: fileName }
+      jsonBody: { url: `${blockBlobClient.url}?${sas}`, filename: fileName }
     };
   } catch (error: any) {
     context.log(`Error uploading image: ${error.message}`);
