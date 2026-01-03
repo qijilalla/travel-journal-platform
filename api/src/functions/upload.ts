@@ -1,12 +1,19 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from "@azure/functions";
 import { BlobServiceClient } from "@azure/storage-blob";
 
-const connectionString = process.env.BLOB_CONNECTION_STRING || "";
-const containerName = process.env.BLOB_CONTAINER || "images";
-
 // POST upload image
 export async function uploadImage(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
   try {
+    const connectionString = process.env.BLOB_CONNECTION_STRING || "";
+    const containerName = process.env.BLOB_CONTAINER || "images";
+    
+    context.log("BLOB_CONNECTION_STRING exists:", !!connectionString);
+    context.log("Container name:", containerName);
+    
+    if (!connectionString) {
+      return { status: 500, jsonBody: { error: "BLOB_CONNECTION_STRING not configured" } };
+    }
+
     const formData = await request.formData();
     const fileEntry = formData.get("file");
     
