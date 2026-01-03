@@ -1,0 +1,19 @@
+{
+  "name": "journal-api",
+  "version": "1.0.0",
+  "main": "dist/functions/*.js",
+  "scripts": {
+    "start": "func start",
+    "build": "tsc",
+    "prestart": "npm run build"
+  },
+  "dependencies": {
+    "@azure/cosmos": "^4.0.0",
+    "@azure/storage-blob": "^12.17.0",
+    "@azure/functions": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  }
+}

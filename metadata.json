@@ -1,0 +1,7 @@
+{
+  "name": "Travel Journal Platform (CW2)",
+  "description": "A cloud-native fashion-forward travel journal app designed for Azure deployment.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
