@@ -6,10 +6,7 @@ export async function uploadImage(request: HttpRequest, context: InvocationConte
   try {
     const connectionString = process.env.BLOB_CONNECTION_STRING;
     const containerName = process.env.BLOB_CONTAINER || "images";
-    
-    context.log("BLOB_CONNECTION_STRING exists:", !!connectionString);
-    context.log("Connection string starts with:", connectionString?.substring(0, 30));
-    
+
     if (!connectionString) {
       return { status: 500, jsonBody: { error: "BLOB_CONNECTION_STRING not configured" } };
     }
@@ -32,23 +29,24 @@ export async function uploadImage(request: HttpRequest, context: InvocationConte
 
     const blobServiceClient = BlobServiceClient.fromConnectionString(connectionString);
     const containerClient = blobServiceClient.getContainerClient(containerName);
-    
+
+    // Ensure container exists.
+    await containerClient.createIfNotExists({ access: "blob" });
+
     const blockBlobClient = containerClient.getBlockBlobClient(fileName);
-    
+
     await blockBlobClient.upload(file.data, file.data.length, {
-      blobHTTPHeaders: { blobContentType: file.type || "image/jpeg" }
+      blobHTTPHeaders: { blobContentType: file.type }
     });
 
-    context.log("Image uploaded:", blockBlobClient.url);
-    
     return {
       status: 200,
       jsonBody: { url: blockBlobClient.url, filename: fileName }
     };
   } catch (error: any) {
-    context.log("Error uploading image:", error?.message || error);
-    return { status: 500, jsonBody: { error: "Failed to upload image", details: error?.message } };
+    context.log(`Error uploading image: ${error.message}`);
+    return { status: 500, body: `Error: ${error.message}` };
   }
 }
 
-app.http("uploadImage", { methods: ["POST"], route: "upload", handler: uploadImage });
+app.http("uploadImage", { methods: ["POST"], authLevel: "anonymous", handler: uploadImage, route: "upload" });
