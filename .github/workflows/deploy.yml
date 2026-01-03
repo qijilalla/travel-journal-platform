@@ -8,7 +8,6 @@ on:
 
 env:
   AZURE_FUNCTIONAPP_NAME: 'journal-api-136'
-  AZURE_FUNCTIONAPP_PACKAGE_PATH: 'api'
   NODE_VERSION: '20.x'
 
 jobs:
@@ -23,19 +22,24 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: Install dependencies
+      - name: Install and Build
+        working-directory: ./api
         run: |
-          cd ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
           npm install
-
-      - name: Build
-        run: |
-          cd ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
           npm run build
+
+      - name: Prepare deployment package
+        working-directory: ./api
+        run: |
+          mkdir -p deploy
+          cp -r dist/* deploy/ 2>/dev/null || true
+          cp -r node_modules deploy/
+          cp host.json deploy/
+          cp package.json deploy/
 
       - name: Deploy to Azure Functions
         uses: Azure/functions-action@v1
         with:
           app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
-          package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
+          package: ./api/deploy
           publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
