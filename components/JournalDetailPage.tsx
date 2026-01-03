@@ -20,7 +20,7 @@ const JournalDetailPage: React.FC<JournalDetailPageProps> = ({
 }) => {
   const [commentText, setCommentText] = useState('');
 
-  const isLiked = currentUser && entry.likes.includes(currentUser.id);
+  const isLiked = currentUser && entry.likes?.includes(currentUser.id);
   
   // Permission Check: Author OR Admin
   const isAuthor = currentUser && entry.authorId === currentUser.id;
@@ -111,7 +111,7 @@ const JournalDetailPage: React.FC<JournalDetailPageProps> = ({
               <div className={`p-4 rounded-full border transition-colors ${isLiked ? 'bg-red-50 border-red-200 text-red-500' : 'border-stone-200 text-stone-400 hover:border-stone-900 hover:text-stone-900'}`}>
                  <Heart size={28} fill={isLiked ? "currentColor" : "none"} />
               </div>
-              <span className="font-body text-xs uppercase tracking-widest text-stone-500">{entry.likes.length} {t.likes}</span>
+              <span className="font-body text-xs uppercase tracking-widest text-stone-500">{entry.likes?.length || 0} {t.likes}</span>
             </button>
           </div>
 
@@ -122,10 +122,10 @@ const JournalDetailPage: React.FC<JournalDetailPageProps> = ({
             </h3>
 
             <div className="space-y-8 mb-10">
-              {entry.comments.length === 0 ? (
+              {(!entry.comments || entry.comments.length === 0) ? (
                 <p className="text-center text-stone-400 font-body italic text-sm">No comments yet. Share your thoughts.</p>
               ) : (
-                entry.comments.map(comment => (
+                (entry.comments || []).map(comment => (
                   <div key={comment.id} className="flex gap-4 group/comment relative">
                     <div className="w-10 h-10 rounded-full bg-stone-200 flex items-center justify-center font-header text-stone-500 text-lg flex-shrink-0">
                       {comment.authorName.charAt(0).toUpperCase()}

@@ -1,7 +1,9 @@
 import { JournalEntry, User, Comment } from '../types';
 
 // Azure Function App URL - 部署后替换为你的真实 URL
-const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || 'https://journal-api-136.azurewebsites.net/api';
+const API_BASE_URL =
+  (import.meta as any).env?.VITE_API_URL ||
+  'https://journal-api-136-brfqayekezakf0cm.germanywestcentral-01.azurewebsites.net/api';
 
 // --- 本地用户管理 (简化版，实际可用 Azure AD B2C) ---
 let currentUser: User | null = null;
@@ -83,7 +85,10 @@ export const uploadImage = async (file: File): Promise<string> => {
     body: formData
   });
   
-  if (!response.ok) throw new Error('Failed to upload image');
+  if (!response.ok) {
+    const detail = await response.text().catch(() => '');
+    throw new Error(detail || 'Failed to upload image');
+  }
   const data = await response.json();
   return data.url;
 };

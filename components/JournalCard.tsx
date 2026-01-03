@@ -12,7 +12,7 @@ interface JournalCardProps {
 
 const JournalCard: React.FC<JournalCardProps> = ({ entry, t, currentUserId, onClick, onLike }) => {
   
-  const isLiked = currentUserId && entry.likes.includes(currentUserId);
+  const isLiked = currentUserId && entry.likes?.includes(currentUserId);
 
   return (
     <div 
@@ -74,10 +74,10 @@ const JournalCard: React.FC<JournalCardProps> = ({ entry, t, currentUserId, onCl
              onClick={(e) => onLike(entry.id, e)}
              className={`flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest hover:text-red-500 transition-colors ${isLiked ? 'text-red-500' : ''}`}
            >
-              <Heart size={14} fill={isLiked ? "currentColor" : "none"} /> {entry.likes.length}
+              <Heart size={14} fill={isLiked ? "currentColor" : "none"} /> {entry.likes?.length || 0}
            </button>
            <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest">
-              <MessageCircle size={14} /> {entry.comments.length}
+              <MessageCircle size={14} /> {entry.comments?.length || 0}
            </div>
         </div>
       </div>
