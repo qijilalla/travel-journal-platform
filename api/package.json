@@ -1,7 +1,7 @@
 {
   "name": "journal-api",
   "version": "1.0.0",
-  "main": "dist/functions/*.js",
+  "main": "dist/functions/journals.js",
   "scripts": {
     "start": "func start",
     "build": "tsc",
