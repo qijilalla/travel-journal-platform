@@ -8,6 +8,7 @@ export async function uploadImage(request: HttpRequest, context: InvocationConte
     const containerName = process.env.BLOB_CONTAINER || "images";
     
     context.log("BLOB_CONNECTION_STRING exists:", !!connectionString);
+    context.log("Connection string starts with:", connectionString?.substring(0, 30));
     
     if (!connectionString) {
       return { status: 500, jsonBody: { error: "BLOB_CONNECTION_STRING not configured" } };
@@ -16,8 +17,11 @@ export async function uploadImage(request: HttpRequest, context: InvocationConte
     // Parse multipart data
     const bodyBuffer = Buffer.from(await request.arrayBuffer());
     const contentType = request.headers.get("content-type") || "";
+    context.log("Content-Type:", contentType);
     const boundary = multipart.getBoundary(contentType);
+    context.log("Boundary:", boundary);
     const parts = multipart.parse(bodyBuffer, boundary);
+    context.log("Parts count:", parts?.length);
 
     if (!parts || parts.length === 0) {
       return { status: 400, jsonBody: { error: "No file uploaded" } };
