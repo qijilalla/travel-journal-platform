@@ -28,18 +28,9 @@ jobs:
           npm install
           npm run build
 
-      - name: Prepare deployment package
-        working-directory: ./api
-        run: |
-          mkdir -p deploy
-          cp -r dist/* deploy/ 2>/dev/null || true
-          cp -r node_modules deploy/
-          cp host.json deploy/
-          cp package.json deploy/
-
       - name: Deploy to Azure Functions
         uses: Azure/functions-action@v1
         with:
           app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
-          package: ./api/deploy
+          package: ./api
           publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
