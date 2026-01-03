@@ -38,9 +38,9 @@ export async function uploadImage(request: HttpRequest, context: InvocationConte
       status: 200,
       jsonBody: { url: imageUrl }
     };
-  } catch (error) {
-    context.log("Error uploading image:", error);
-    return { status: 500, jsonBody: { error: "Failed to upload image" } };
+  } catch (error: any) {
+    context.log("Error uploading image:", error?.message || error);
+    return { status: 500, jsonBody: { error: "Failed to upload image", details: error?.message || String(error) } };
   }
 }
 
