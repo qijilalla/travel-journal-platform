@@ -1,53 +1,49 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from "@azure/functions";
 import { BlobServiceClient } from "@azure/storage-blob";
+import * as multipart from "parse-multipart-data";
 
-// POST upload image
 export async function uploadImage(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
   try {
-    const connectionString = process.env.BLOB_CONNECTION_STRING || "";
+    const connectionString = process.env.BLOB_CONNECTION_STRING;
     const containerName = process.env.BLOB_CONTAINER || "images";
     
     context.log("BLOB_CONNECTION_STRING exists:", !!connectionString);
-    context.log("Container name:", containerName);
     
     if (!connectionString) {
       return { status: 500, jsonBody: { error: "BLOB_CONNECTION_STRING not configured" } };
     }
 
-    const formData = await request.formData();
-    const fileEntry = formData.get("file");
-    
-    if (!fileEntry || typeof fileEntry === "string") {
-      return { status: 400, jsonBody: { error: "No file provided" } };
+    // Parse multipart data
+    const bodyBuffer = Buffer.from(await request.arrayBuffer());
+    const contentType = request.headers.get("content-type") || "";
+    const boundary = multipart.getBoundary(contentType);
+    const parts = multipart.parse(bodyBuffer, boundary);
+
+    if (!parts || parts.length === 0) {
+      return { status: 400, jsonBody: { error: "No file uploaded" } };
     }
 
-    const file = fileEntry as unknown as { name: string; type: string; arrayBuffer(): Promise<ArrayBuffer> };
+    const file = parts[0];
+    const fileName = file.filename || `upload-${Date.now()}.jpg`;
 
     const blobServiceClient = BlobServiceClient.fromConnectionString(connectionString);
     const containerClient = blobServiceClient.getContainerClient(containerName);
     
-    // Generate unique blob name
-    const blobName = `${Date.now()}-${file.name}`;
-    const blockBlobClient = containerClient.getBlockBlobClient(blobName);
+    const blockBlobClient = containerClient.getBlockBlobClient(fileName);
     
-    // Upload file
-    const arrayBuffer = await file.arrayBuffer();
-    await blockBlobClient.uploadData(arrayBuffer, {
-      blobHTTPHeaders: { blobContentType: file.type }
+    await blockBlobClient.upload(file.data, file.data.length, {
+      blobHTTPHeaders: { blobContentType: file.type || "image/jpeg" }
     });
 
-    // Return the URL
-    const imageUrl = blockBlobClient.url;
-    
-    context.log("Image uploaded:", imageUrl);
+    context.log("Image uploaded:", blockBlobClient.url);
     
     return {
       status: 200,
-      jsonBody: { url: imageUrl }
+      jsonBody: { url: blockBlobClient.url, filename: fileName }
     };
   } catch (error: any) {
     context.log("Error uploading image:", error?.message || error);
-    return { status: 500, jsonBody: { error: "Failed to upload image", details: error?.message || String(error) } };
+    return { status: 500, jsonBody: { error: "Failed to upload image", details: error?.message } };
   }
 }
 
